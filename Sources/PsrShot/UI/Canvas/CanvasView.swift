@@ -280,7 +280,7 @@ public final class CanvasView: NSView, NSTextFieldDelegate {
             case .text:
                 spawnInlineTextField(at: point)
                 
-            case .rectangle, .arrow, .pen, .blur:
+            case .shape, .arrow, .pen, .blur:
                 mouseState = .drawing(tool: currentTool, startPoint: point)
                 handleDrawingDrag(to: point)
             }
@@ -363,17 +363,17 @@ public final class CanvasView: NSView, NSTextFieldDelegate {
         )
         
         switch tool {
-        case .rectangle(let filled):
+        case .shape(let type):
             let rect = CGRect(
                 x: min(startPoint.x, clampedPoint.x),
                 y: min(startPoint.y, clampedPoint.y),
                 width: abs(clampedPoint.x - startPoint.x),
                 height: abs(clampedPoint.y - startPoint.y)
             )
-            currentDrawingItem = .rectangle(rect: rect, color: currentColor, strokeWidth: currentStrokeWidth, isFilled: filled)
+            currentDrawingItem = .shape(type: type, rect: rect, color: currentColor, strokeWidth: currentStrokeWidth)
             
-        case .arrow:
-            currentDrawingItem = .arrow(start: startPoint, end: clampedPoint, color: currentColor, strokeWidth: currentStrokeWidth)
+        case .arrow(let type):
+            currentDrawingItem = .arrow(type: type, start: startPoint, end: clampedPoint, color: currentColor, strokeWidth: currentStrokeWidth)
             
         case .pen:
             if case .pen(var points, let color, let width) = currentDrawingItem {
@@ -408,17 +408,23 @@ public final class CanvasView: NSView, NSTextFieldDelegate {
     private func spawnInlineTextField(at point: CGPoint) {
         commitActiveTextIfNeeded()
         
-        let field = NSTextField(frame: NSRect(x: point.x, y: point.y, width: 220, height: 28))
+        let field = NSTextField(frame: NSRect(x: point.x, y: point.y, width: 240, height: 28))
         field.isBordered = false
-        field.drawsBackground = true
-        field.backgroundColor = NSColor.black.withAlphaComponent(0.65)
+        field.drawsBackground = false
+        field.backgroundColor = .clear
         field.textColor = currentColor
         field.font = NSFont.systemFont(ofSize: 16, weight: .bold)
         field.focusRingType = .none
         field.placeholderString = "Type text..."
         field.delegate = self
         field.wantsLayer = true
-        field.layer?.cornerRadius = 4
+        
+        // Add subtle shadow for visibility on any background while typing
+        let shadow = NSShadow()
+        shadow.shadowColor = NSColor.black.withAlphaComponent(0.8)
+        shadow.shadowBlurRadius = 3.5
+        shadow.shadowOffset = .zero
+        field.shadow = shadow
         
         addSubview(field)
         window?.makeFirstResponder(field)

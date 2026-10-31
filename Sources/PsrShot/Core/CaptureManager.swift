@@ -18,9 +18,9 @@ public final class CaptureManager: @unchecked Sendable {
     }
     
     public func captureActiveDisplay(completion: @escaping (Result<(CGImage, NSScreen), Error>) -> Void) {
-        let screen = targetScreenForCapture()
-        guard let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {
-            fallbackCapture(screen: screen, completion: completion)
+        let initialScreen = targetScreenForCapture()
+        guard let screenNumber = initialScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {
+            fallbackCapture(screen: initialScreen, displayID: nil, completion: completion)
             return
         }
         let displayID = CGDirectDisplayID(screenNumber.uint32Value)
@@ -38,8 +38,9 @@ public final class CaptureManager: @unchecked Sendable {
                         config.capturesAudio = false
                         
                         let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
-                        DispatchQueue.main.async {
-                            completion(.success((image, screen)))
+                        await MainActor.run {
+                            let targetScreen = self.findScreen(for: displayID) ?? NSScreen.main ?? NSScreen()
+                            completion(.success((image, targetScreen)))
                         }
                         return
                     }
@@ -48,21 +49,27 @@ public final class CaptureManager: @unchecked Sendable {
                 }
                 
                 // Fallback to CoreGraphics
-                DispatchQueue.main.async {
-                    self.fallbackCapture(screen: screen, displayID: displayID, completion: completion)
+                await MainActor.run {
+                    let targetScreen = self.findScreen(for: displayID) ?? NSScreen.main ?? NSScreen()
+                    self.fallbackCapture(screen: targetScreen, displayID: displayID, completion: completion)
                 }
             }
         } else {
-            fallbackCapture(screen: screen, displayID: displayID, completion: completion)
+            fallbackCapture(screen: initialScreen, displayID: displayID, completion: completion)
         }
     }
     
-    private func fallbackCapture(screen: NSScreen, displayID: CGDirectDisplayID? = nil, completion: @escaping (Result<(CGImage, NSScreen), Error>) -> Void) {
-        if let displayID = displayID, let image = CGDisplayCreateImage(displayID) {
-            completion(.success((image, screen)))
-            return
+    public func findScreen(for displayID: CGDirectDisplayID) -> NSScreen? {
+        for screen in NSScreen.screens {
+            if let num = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber,
+               CGDirectDisplayID(num.uint32Value) == displayID {
+                return screen
+            }
         }
-        
+        return nil
+    }
+    
+    private func fallbackCapture(screen: NSScreen, displayID: CGDirectDisplayID? = nil, completion: @escaping (Result<(CGImage, NSScreen), Error>) -> Void) {
         let screenRect = screen.frame
         if let image = CGWindowListCreateImage(
             screenRect,

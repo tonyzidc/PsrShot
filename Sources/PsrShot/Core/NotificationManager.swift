@@ -4,16 +4,30 @@ import UserNotifications
 public final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     public static let shared = NotificationManager()
     
+    public static var isNotificationSupported: Bool {
+        guard Bundle.main.bundleURL.pathExtension == "app" else {
+            return false
+        }
+        guard NSClassFromString("XCTestCase") == nil,
+              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
+            return false
+        }
+        guard Bundle.main.bundleIdentifier != nil else {
+            return false
+        }
+        return true
+    }
+    
     private override init() {
         super.init()
-        if Bundle.main.bundleIdentifier != nil {
+        if Self.isNotificationSupported {
             let center = UNUserNotificationCenter.current()
             center.delegate = self
         }
     }
     
     public func requestAuthorization() {
-        guard Bundle.main.bundleIdentifier != nil else { return }
+        guard Self.isNotificationSupported else { return }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
             if let error = error {
                 NSLog("[NotificationManager] Error requesting notification auth: \(error)")
@@ -22,7 +36,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     }
     
     public func postUploadSuccess(viewURL: String) {
-        guard Bundle.main.bundleIdentifier != nil else { return }
+        guard Self.isNotificationSupported else { return }
         let content = UNMutableNotificationContent()
         content.title = "PsrShot: Upload Succeeded! ☁️"
         content.body = "Screenshot view link has been copied to your clipboard.\nClick to open in browser."
@@ -43,7 +57,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     }
     
     public func postUploadFailure(error: Error) {
-        guard Bundle.main.bundleIdentifier != nil else { return }
+        guard Self.isNotificationSupported else { return }
         let content = UNMutableNotificationContent()
         content.title = "PsrShot: Upload Failed ❌"
         content.body = error.localizedDescription

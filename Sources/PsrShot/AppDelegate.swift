@@ -90,8 +90,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             guard granted else { return }
             CaptureManager.shared.captureActiveDisplay { result in
                 switch result {
-                case .success(let (image, _)):
-                    ImageExporter.copyToPasteboard(cgImage: image)
+                case .success(let (image, screen)):
+                    ImageExporter.copyToPasteboard(cgImage: image, screen: screen)
                     NSSound.beep()
                     
                     let config = S3Config.load()

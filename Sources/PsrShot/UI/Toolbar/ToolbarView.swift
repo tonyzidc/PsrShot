@@ -12,16 +12,25 @@ public final class ToolbarView: NSVisualEffectView {
     public var onClose: (() -> Void)?
     
     // State
-    private var currentTool: AnnotationTool = .select
-    private var currentColor: NSColor = .systemRed
-    private var currentStrokeWidth: CGFloat = 3.0
+    public private(set) var currentTool: AnnotationTool = .select
+    public private(set) var currentShape: ShapeType = .rectangle
+    public private(set) var currentArrow: ArrowType = .single
+    public private(set) var currentColor: NSColor = .systemRed
+    public private(set) var currentStrokeWidth: CGFloat = 3.0
     
     // Tool buttons
-    private var toolButtons: [AnnotationTool: ToolButton] = [:]
+    private var selectBtn: ToolButton!
+    private var shapeBtn: ToolButton!
+    private var arrowBtn: ToolButton!
+    private var penBtn: ToolButton!
+    private var textBtn: ToolButton!
+    private var blurBtn: ToolButton!
+    
     private var colorButtons: [(NSColor, ColorSwatchButton)] = []
+    private var colorPickerBtn: ToolButton!
     
     public init() {
-        super.init(frame: NSRect(x: 0, y: 0, width: 490, height: 38))
+        super.init(frame: NSRect(x: 0, y: 0, width: 630, height: 38))
         setupHUD()
         buildControls()
     }
@@ -51,51 +60,78 @@ public final class ToolbarView: NSVisualEffectView {
         let btnSize: CGFloat = 28
         
         // --- 1. Tools Group ---
-        let tools: [(AnnotationTool, String, String)] = [
-            (.select, "arrow.up.left.and.arrow.down.right", "Select & Move Region"),
-            (.rectangle(filled: false), "square", "Draw Rectangle"),
-            (.arrow, "arrow.up.right", "Draw Arrow"),
-            (.pen, "pencil.tip", "Freehand Pen"),
-            (.text, "textformat", "Insert Text"),
-            (.blur, "eye.slash", "Blur Sensitive Area")
-        ]
+        // Select Tool
+        selectBtn = ToolButton(systemSymbol: "arrow.up.left.and.arrow.down.right", tooltip: "Select & Move Region", target: self, action: #selector(selectClicked))
+        selectBtn.frame = NSRect(x: xOffset, y: btnY, width: btnSize, height: btnSize)
+        selectBtn.isToolSelected = true
+        addSubview(selectBtn)
+        xOffset += btnSize + 2
         
-        for (tool, symbol, tip) in tools {
-            let btn = ToolButton(systemSymbol: symbol, tooltip: tip, target: self, action: #selector(toolClicked(_:)))
-            btn.frame = NSRect(x: xOffset, y: btnY, width: btnSize, height: btnSize)
-            addSubview(btn)
-            toolButtons[tool] = btn
-            xOffset += btnSize + 2
-        }
-        toolButtons[.select]?.isToolSelected = true
+        // Shape Tool (Rect, Rounded, Ellipse, Filled)
+        shapeBtn = ToolButton(systemSymbol: currentShape.iconSymbol, tooltip: "Shapes (Click for options: Rect, Rounded, Circle, Fill)", target: self, action: #selector(shapeClicked))
+        shapeBtn.frame = NSRect(x: xOffset, y: btnY, width: btnSize, height: btnSize)
+        addSubview(shapeBtn)
+        xOffset += btnSize + 2
+        
+        // Arrow Tool (Single, Double, Line, Dashed)
+        arrowBtn = ToolButton(systemSymbol: currentArrow.iconSymbol, tooltip: "Arrows (Click for options: Single, Double, Line, Dashed)", target: self, action: #selector(arrowClicked))
+        arrowBtn.frame = NSRect(x: xOffset, y: btnY, width: btnSize, height: btnSize)
+        addSubview(arrowBtn)
+        xOffset += btnSize + 2
+        
+        // Pen Tool
+        penBtn = ToolButton(systemSymbol: "pencil.tip", tooltip: "Freehand Pen", target: self, action: #selector(penClicked))
+        penBtn.frame = NSRect(x: xOffset, y: btnY, width: btnSize, height: btnSize)
+        addSubview(penBtn)
+        xOffset += btnSize + 2
+        
+        // Text Tool
+        textBtn = ToolButton(systemSymbol: "textformat", tooltip: "Insert Text (Transparent Background)", target: self, action: #selector(textClicked))
+        textBtn.frame = NSRect(x: xOffset, y: btnY, width: btnSize, height: btnSize)
+        addSubview(textBtn)
+        xOffset += btnSize + 2
+        
+        // Blur Tool
+        blurBtn = ToolButton(systemSymbol: "eye.slash", tooltip: "Blur Sensitive Area", target: self, action: #selector(blurClicked))
+        blurBtn.frame = NSRect(x: xOffset, y: btnY, width: btnSize, height: btnSize)
+        addSubview(blurBtn)
+        xOffset += btnSize + 2
         
         // Separator
         xOffset += 4
         addSubview(makeSeparator(at: xOffset))
         xOffset += 8
         
-        // --- 2. Color Palette ---
+        // --- 2. Color Palette (8 vibrant presets + Native Color Picker) ---
         let colors: [(NSColor, String)] = [
-            (.systemRed, "Red Color"),
-            (.systemBlue, "Blue Color"),
-            (.systemGreen, "Green Color"),
-            (.systemYellow, "Yellow Color"),
-            (.white, "White Color")
+            (.systemRed, "Red"),
+            (.systemOrange, "Orange"),
+            (.systemYellow, "Yellow"),
+            (.systemGreen, "Green"),
+            (.systemBlue, "Blue"),
+            (.systemPurple, "Purple"),
+            (.black, "Black"),
+            (.white, "White")
         ]
         
         for (color, tip) in colors {
             let swatch = ColorSwatchButton(color: color, tooltip: tip, target: self, action: #selector(colorClicked(_:)))
-            swatch.frame = NSRect(x: xOffset + 2, y: btnY + 3, width: 22, height: 22)
+            swatch.frame = NSRect(x: xOffset + 1, y: btnY + 3, width: 20, height: 20)
             if color == currentColor {
                 swatch.isSwatchSelected = true
             }
             addSubview(swatch)
             colorButtons.append((color, swatch))
-            xOffset += 24
+            xOffset += 22
         }
         
+        // Native Color Picker Button (🎨)
+        colorPickerBtn = ToolButton(systemSymbol: "paintpalette", tooltip: "Custom Colors & Eyedropper...", target: self, action: #selector(openColorPanel))
+        colorPickerBtn.frame = NSRect(x: xOffset + 2, y: btnY, width: btnSize, height: btnSize)
+        addSubview(colorPickerBtn)
+        xOffset += btnSize + 6
+        
         // Separator
-        xOffset += 4
         addSubview(makeSeparator(at: xOffset))
         xOffset += 8
         
@@ -141,19 +177,131 @@ public final class ToolbarView: NSVisualEffectView {
         return sep
     }
     
-    // MARK: - Actions
+    private func deselectAllTools() {
+        selectBtn.isToolSelected = false
+        shapeBtn.isToolSelected = false
+        arrowBtn.isToolSelected = false
+        penBtn.isToolSelected = false
+        textBtn.isToolSelected = false
+        blurBtn.isToolSelected = false
+    }
     
-    @objc private func toolClicked(_ sender: ToolButton) {
-        for (tool, btn) in toolButtons {
-            if btn === sender {
-                btn.isToolSelected = true
-                currentTool = tool
-                onToolSelected?(tool)
-            } else {
-                btn.isToolSelected = false
+    // MARK: - Tool Actions
+    
+    @objc private func selectClicked() {
+        deselectAllTools()
+        selectBtn.isToolSelected = true
+        currentTool = .select
+        onToolSelected?(.select)
+    }
+    
+    @objc private func shapeClicked() {
+        deselectAllTools()
+        shapeBtn.isToolSelected = true
+        currentTool = .shape(currentShape)
+        onToolSelected?(currentTool)
+        
+        // Show shape menu on click
+        showShapeMenu()
+    }
+    
+    private func showShapeMenu() {
+        let menu = NSMenu()
+        for shape in ShapeType.allCases {
+            let item = NSMenuItem(title: shape.rawValue, action: #selector(selectShapeVariant(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = shape
+            if let img = NSImage(systemSymbolName: shape.iconSymbol, accessibilityDescription: shape.rawValue) {
+                item.image = img
             }
+            if shape == currentShape {
+                item.state = .on
+            }
+            menu.addItem(item)
+        }
+        
+        let point = NSPoint(x: shapeBtn.frame.minX, y: bounds.height + 4)
+        menu.popUp(positioning: nil, at: point, in: self)
+    }
+    
+    @objc private func selectShapeVariant(_ sender: NSMenuItem) {
+        if let shape = sender.representedObject as? ShapeType {
+            currentShape = shape
+            if let img = NSImage(systemSymbolName: shape.iconSymbol, accessibilityDescription: shape.rawValue) {
+                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+                shapeBtn.image = img.withSymbolConfiguration(config)
+            }
+            deselectAllTools()
+            shapeBtn.isToolSelected = true
+            currentTool = .shape(shape)
+            onToolSelected?(currentTool)
         }
     }
+    
+    @objc private func arrowClicked() {
+        deselectAllTools()
+        arrowBtn.isToolSelected = true
+        currentTool = .arrow(currentArrow)
+        onToolSelected?(currentTool)
+        
+        showArrowMenu()
+    }
+    
+    private func showArrowMenu() {
+        let menu = NSMenu()
+        for arrow in ArrowType.allCases {
+            let item = NSMenuItem(title: arrow.rawValue, action: #selector(selectArrowVariant(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = arrow
+            if let img = NSImage(systemSymbolName: arrow.iconSymbol, accessibilityDescription: arrow.rawValue) {
+                item.image = img
+            }
+            if arrow == currentArrow {
+                item.state = .on
+            }
+            menu.addItem(item)
+        }
+        
+        let point = NSPoint(x: arrowBtn.frame.minX, y: bounds.height + 4)
+        menu.popUp(positioning: nil, at: point, in: self)
+    }
+    
+    @objc private func selectArrowVariant(_ sender: NSMenuItem) {
+        if let arrow = sender.representedObject as? ArrowType {
+            currentArrow = arrow
+            if let img = NSImage(systemSymbolName: arrow.iconSymbol, accessibilityDescription: arrow.rawValue) {
+                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+                arrowBtn.image = img.withSymbolConfiguration(config)
+            }
+            deselectAllTools()
+            arrowBtn.isToolSelected = true
+            currentTool = .arrow(arrow)
+            onToolSelected?(currentTool)
+        }
+    }
+    
+    @objc private func penClicked() {
+        deselectAllTools()
+        penBtn.isToolSelected = true
+        currentTool = .pen
+        onToolSelected?(.pen)
+    }
+    
+    @objc private func textClicked() {
+        deselectAllTools()
+        textBtn.isToolSelected = true
+        currentTool = .text
+        onToolSelected?(.text)
+    }
+    
+    @objc private func blurClicked() {
+        deselectAllTools()
+        blurBtn.isToolSelected = true
+        currentTool = .blur
+        onToolSelected?(.blur)
+    }
+    
+    // MARK: - Color Palette & NSColorPanel
     
     @objc private func colorClicked(_ sender: ColorSwatchButton) {
         for (color, btn) in colorButtons {
@@ -165,6 +313,27 @@ public final class ToolbarView: NSVisualEffectView {
                 btn.isSwatchSelected = false
             }
         }
+    }
+    
+    @objc private func openColorPanel() {
+        let panel = NSColorPanel.shared
+        panel.showsAlpha = false
+        panel.color = currentColor
+        panel.setTarget(self)
+        panel.setAction(#selector(colorPanelColorDidChange(_:)))
+        panel.orderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    
+    @objc private func colorPanelColorDidChange(_ sender: NSColorPanel) {
+        let newColor = sender.color
+        self.currentColor = newColor
+        
+        // Deselect fixed preset swatches unless matches
+        for (color, btn) in colorButtons {
+            btn.isSwatchSelected = (color == newColor)
+        }
+        onColorSelected?(newColor)
     }
     
     @objc private func undoClicked() {

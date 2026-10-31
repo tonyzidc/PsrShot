@@ -80,7 +80,7 @@ public final class OverlayWindowController: NSWindowController {
                 annotations: canvas.annotations
               ) else { return }
         
-        ImageExporter.copyToPasteboard(cgImage: finalImage)
+        ImageExporter.copyToPasteboard(cgImage: finalImage, screen: screen)
         NSSound.beep()
         dismiss()
     }

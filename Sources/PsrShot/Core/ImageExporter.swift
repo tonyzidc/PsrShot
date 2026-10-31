@@ -11,9 +11,14 @@ public final class ImageExporter {
         cropRect: CGRect,
         annotations: [AnnotationItem]
     ) -> CGImage? {
-        let scale = screen.backingScaleFactor
-        let pixelWidth = Int(ceil(cropRect.width * scale))
-        let pixelHeight = Int(ceil(cropRect.height * scale))
+        let screenWidth = max(1.0, screen.frame.width)
+        let screenHeight = max(1.0, screen.frame.height)
+        
+        let scaleX = CGFloat(baseImage.width) / screenWidth
+        let scaleY = CGFloat(baseImage.height) / screenHeight
+        
+        let pixelWidth = Int(ceil(cropRect.width * scaleX))
+        let pixelHeight = Int(ceil(cropRect.height * scaleY))
         
         guard pixelWidth > 0 && pixelHeight > 0 else { return nil }
         
@@ -30,26 +35,25 @@ public final class ImageExporter {
             bitmapInfo: bitmapInfo
         ) else { return nil }
         
-        // Context setup: AppKit coordinates have origin at top-left when flipped
-        // In CGContext, drawing an image draws it right side up if transformed
-        let pixelCropRect = CGRect(
-            x: cropRect.origin.x * scale,
-            y: cropRect.origin.y * scale,
-            width: CGFloat(pixelWidth),
-            height: CGFloat(pixelHeight)
-        )
+        // Accurate pixel cropping with strict boundary clamping
+        let cropX = max(0.0, min(CGFloat(baseImage.width), cropRect.origin.x * scaleX))
+        let cropY = max(0.0, min(CGFloat(baseImage.height), cropRect.origin.y * scaleY))
+        let cropW = max(1.0, min(CGFloat(baseImage.width) - cropX, cropRect.width * scaleX))
+        let cropH = max(1.0, min(CGFloat(baseImage.height) - cropY, cropRect.height * scaleY))
+        
+        let pixelCropRect = CGRect(x: cropX, y: cropY, width: cropW, height: cropH)
         
         if let croppedBase = baseImage.cropping(to: pixelCropRect) {
             context.draw(croppedBase, in: CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight))
         }
         
-        // Translate and scale for drawing annotations in points
+        // Draw annotations aligned to top-left coordinate system
         context.saveGState()
-        context.scaleBy(x: scale, y: scale)
+        context.scaleBy(x: scaleX, y: scaleY)
         context.translateBy(x: -cropRect.origin.x, y: -cropRect.origin.y)
         
         for annotation in annotations {
-            annotation.draw(in: context, baseImage: baseImage, scale: scale)
+            annotation.draw(in: context, baseImage: baseImage, scale: (scaleX + scaleY) / 2.0)
         }
         context.restoreGState()
         
@@ -75,18 +79,30 @@ public final class ImageExporter {
         return data as Data
     }
     
-    public static func copyToPasteboard(cgImage: CGImage) {
+    public static func copyToPasteboard(cgImage: CGImage, screen: NSScreen? = nil) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         
-        // Write TIFF representation
-        let bitmapRep = NSBitmapImageRep(cgImage: cgImage)
-        if let tiffData = bitmapRep.tiffRepresentation {
-            pasteboard.setData(tiffData, forType: .tiff)
-        }
-        // Write PNG representation
-        if let pngData = bitmapRep.representation(using: .png, properties: [:]) {
+        let scale = screen?.backingScaleFactor ?? 2.0
+        let logicalSize = NSSize(
+            width: CGFloat(cgImage.width) / scale,
+            height: CGFloat(cgImage.height) / scale
+        )
+        
+        let nsImage = NSImage(cgImage: cgImage, size: logicalSize)
+        
+        // 1. Write as NSImage pasteboard object (ensures full compatibility with Cocoa apps)
+        pasteboard.writeObjects([nsImage])
+        
+        // 2. Write PNG representation directly (for browser/web/electron apps)
+        let rep = NSBitmapImageRep(cgImage: cgImage)
+        if let pngData = rep.representation(using: .png, properties: [:]) {
             pasteboard.setData(pngData, forType: .png)
+        }
+        
+        // 3. Write TIFF representation
+        if let tiffData = nsImage.tiffRepresentation {
+            pasteboard.setData(tiffData, forType: .tiff)
         }
     }
     
