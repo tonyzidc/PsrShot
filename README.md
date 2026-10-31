@@ -3,8 +3,8 @@
 [![Build and Release PsrShot](https://github.com/tonyzidc/PsrShot/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/tonyzidc/PsrShot/actions/workflows/build-and-release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-**PsrShot** is an ultra-lightweight, zero-dependency, native macOS menu-bar screenshot and annotation tool inspired by Lightshot. 
-The entire compiled binary is under **300 KB**, memory footprint is **< 30 MB idle**, and it provides instant capture, smooth drawing tools, hardware-accelerated image compression, and direct S3 cloud storage upload.
+**PsrShot** is an ultra-lightweight, zero-dependency, native macOS menu-bar screenshot and annotation tool. 
+The entire compiled binary is under **400 KB**, memory footprint is **< 30 MB idle**, and it provides instant capture, smooth drawing tools, hardware-accelerated image compression, and direct S3 cloud storage upload.
 
 ---
 
