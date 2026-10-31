@@ -101,7 +101,7 @@ public final class ImageExporter {
         savePanel.showsTagField = false
         
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd 'tai' HH.mm.ss"
+        dateFormatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
         let timestamp = dateFormatter.string(from: Date())
         savePanel.nameFieldStringValue = "Screenshot \(timestamp).\(settings.format.fileExtension)"
         savePanel.allowedContentTypes = [settings.format.utType]

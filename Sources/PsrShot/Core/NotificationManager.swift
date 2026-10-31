@@ -6,11 +6,14 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     
     private override init() {
         super.init()
-        let center = UNUserNotificationCenter.current()
-        center.delegate = self
+        if Bundle.main.bundleIdentifier != nil {
+            let center = UNUserNotificationCenter.current()
+            center.delegate = self
+        }
     }
     
     public func requestAuthorization() {
+        guard Bundle.main.bundleIdentifier != nil else { return }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
             if let error = error {
                 NSLog("[NotificationManager] Error requesting notification auth: \(error)")
@@ -19,9 +22,10 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     }
     
     public func postUploadSuccess(viewURL: String) {
+        guard Bundle.main.bundleIdentifier != nil else { return }
         let content = UNMutableNotificationContent()
-        content.title = "PsrShot: Tải lên thành công! ☁️"
-        content.body = "Đường link xem ảnh đã được sao chép vào clipboard.\nNhấn để xem ngay trên trình duyệt."
+        content.title = "PsrShot: Upload Succeeded! ☁️"
+        content.body = "Screenshot view link has been copied to your clipboard.\nClick to open in browser."
         content.sound = .default
         content.userInfo = ["viewURL": viewURL]
         
@@ -39,8 +43,9 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     }
     
     public func postUploadFailure(error: Error) {
+        guard Bundle.main.bundleIdentifier != nil else { return }
         let content = UNMutableNotificationContent()
-        content.title = "PsrShot: Tải lên thất bại ❌"
+        content.title = "PsrShot: Upload Failed ❌"
         content.body = error.localizedDescription
         content.sound = .default
         
@@ -59,7 +64,6 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        // Show banner even if app is active
         if #available(macOS 11.0, *) {
             completionHandler([.banner, .sound])
         } else {

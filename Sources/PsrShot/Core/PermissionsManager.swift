@@ -29,13 +29,12 @@ public final class PermissionsManager {
             return
         }
         
-        // Show an NSAlert guiding the user
         let alert = NSAlert()
-        alert.messageText = "Cần quyền Quay màn hình (Screen Recording)"
-        alert.informativeText = "PsrShot cần được cấp quyền 'Screen Recording' trong Cài đặt hệ thống để chụp và chỉnh sửa màn hình.\n\nVui lòng bật quyền cho PsrShot và thử lại."
+        alert.messageText = "Screen Recording Permission Required"
+        alert.informativeText = "PsrShot requires Screen Recording permission to capture and annotate screenshots.\n\nPlease enable Screen Recording for PsrShot in System Settings and try again."
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Mở Cài đặt hệ thống")
-        alert.addButton(withTitle: "Để sau")
+        alert.addButton(withTitle: "Open System Settings")
+        alert.addButton(withTitle: "Later")
         
         let response = alert.runModal()
         if response == .alertFirstButtonReturn {

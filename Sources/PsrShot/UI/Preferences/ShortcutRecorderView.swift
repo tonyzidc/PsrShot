@@ -55,7 +55,7 @@ public final class ShortcutRecorderView: NSView {
         if isRecording {
             layer?.backgroundColor = NSColor.systemBlue.withAlphaComponent(0.15).cgColor
             layer?.borderColor = NSColor.systemBlue.cgColor
-            label.stringValue = "Nhấn tổ hợp phím mới..."
+            label.stringValue = "Press shortcut..."
             label.textColor = .systemBlue
         } else {
             layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor

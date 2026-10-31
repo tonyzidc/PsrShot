@@ -4,9 +4,12 @@ import Carbon
 public final class PreferencesWindowController: NSWindowController {
     public static let shared = PreferencesWindowController()
     
+    // Tab View
+    private var tabView: NSTabView!
+    
     // UI Elements for Format & Compression
     private var formatPopup = NSPopUpButton()
-    private var compressionCheckbox = NSButton(checkboxWithTitle: "Bật cơ chế nén ảnh (Lossy Compression)", target: nil, action: nil)
+    private var compressionCheckbox = NSButton(checkboxWithTitle: "Enable image compression (Lossy Compression)", target: nil, action: nil)
     private var qualitySlider = NSSlider(value: 80, minValue: 10, maxValue: 100, target: nil, action: nil)
     private var qualityLabel = NSTextField(labelWithString: "80%")
     
@@ -18,17 +21,17 @@ public final class PreferencesWindowController: NSWindowController {
     private var secretKeyField = NSSecureTextField()
     private var publicURLField = NSTextField()
     private var prefixField = NSTextField()
-    private var autoUploadCheckbox = NSButton(checkboxWithTitle: "Tự động tải lên S3 sau khi chụp màn hình", target: nil, action: nil)
+    private var autoUploadCheckbox = NSButton(checkboxWithTitle: "Auto-upload to S3 after screen capture", target: nil, action: nil)
     private var s3StatusLabel = NSTextField(labelWithString: "")
     
     private init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 420),
+            contentRect: NSRect(x: 0, y: 0, width: 490, height: 430),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
-        window.title = "Cài đặt PsrShot"
+        window.title = "PsrShot Preferences"
         window.center()
         super.init(window: window)
         
@@ -42,18 +45,18 @@ public final class PreferencesWindowController: NSWindowController {
     private func setupContent() {
         guard let window = window else { return }
         
-        let tabView = NSTabView(frame: window.contentView?.bounds.insetBy(dx: 12, dy: 12) ?? .zero)
+        tabView = NSTabView(frame: window.contentView?.bounds.insetBy(dx: 12, dy: 12) ?? .zero)
         tabView.autoresizingMask = [.width, .height]
         
         // Tab 1: General & Hotkeys
         let tab1 = NSTabViewItem(identifier: "general")
-        tab1.label = "Phím tắt"
+        tab1.label = "Hotkeys"
         tab1.view = buildGeneralTab()
         tabView.addTabViewItem(tab1)
         
         // Tab 2: Format & Compression
         let tab2 = NSTabViewItem(identifier: "format")
-        tab2.label = "Định dạng & Nén"
+        tab2.label = "Format & Compression"
         tab2.view = buildFormatTab()
         tabView.addTabViewItem(tab2)
         
@@ -66,28 +69,32 @@ public final class PreferencesWindowController: NSWindowController {
         window.contentView?.addSubview(tabView)
     }
     
+    public func selectTab(identifier: String) {
+        tabView.selectTabViewItem(withIdentifier: identifier)
+    }
+    
     // MARK: - Tab 1: General & Hotkey
     
     private func buildGeneralTab() -> NSView {
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 450, height: 340))
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: 350))
         
-        let hotkeyTitle = NSTextField(labelWithString: "Phím tắt chụp màn hình toàn hệ thống:")
+        let hotkeyTitle = NSTextField(labelWithString: "Global screen capture hotkey:")
         hotkeyTitle.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
-        hotkeyTitle.frame = NSRect(x: 20, y: 280, width: 400, height: 20)
+        hotkeyTitle.frame = NSRect(x: 20, y: 290, width: 400, height: 20)
         view.addSubview(hotkeyTitle)
         
-        let recorder = ShortcutRecorderView(frame: NSRect(x: 20, y: 236, width: 220, height: 34))
+        let recorder = ShortcutRecorderView(frame: NSRect(x: 20, y: 246, width: 220, height: 34))
         view.addSubview(recorder)
         
-        let hint = NSTextField(labelWithString: "Bấm vào ô trên rồi nhấn tổ hợp phím mong muốn (ví dụ: ⌥A, ⌘⇧4, ⌘⇧X).")
+        let hint = NSTextField(labelWithString: "Click the box above and press your shortcut (e.g. ⌥A, ⌘⇧4, ⌘⇧X).")
         hint.font = NSFont.systemFont(ofSize: 11)
         hint.textColor = .secondaryLabelColor
-        hint.frame = NSRect(x: 20, y: 206, width: 400, height: 20)
+        hint.frame = NSRect(x: 20, y: 216, width: 420, height: 20)
         view.addSubview(hint)
         
-        let resetBtn = NSButton(title: "Khôi phục mặc định (⌘⇧X)", target: self, action: #selector(resetDefaultHotkey))
+        let resetBtn = NSButton(title: "Reset to Default (⌘⇧X)", target: self, action: #selector(resetDefaultHotkey))
         resetBtn.bezelStyle = .rounded
-        resetBtn.frame = NSRect(x: 16, y: 160, width: 228, height: 32)
+        resetBtn.frame = NSRect(x: 16, y: 170, width: 228, height: 32)
         view.addSubview(resetBtn)
         
         return view
@@ -98,15 +105,10 @@ public final class PreferencesWindowController: NSWindowController {
         let mods = UInt32(cmdKey | shiftKey)
         HotkeyManager.shared.register(keyCode: code, carbonModifiers: mods)
         // Refresh recorder
-        if let window = window {
-            for sub in window.contentView?.subviews ?? [] {
-                if let tabView = sub as? NSTabView,
-                   let tab1 = tabView.tabViewItem(at: 0).view {
-                    for v in tab1.subviews {
-                        if let rec = v as? ShortcutRecorderView {
-                            rec.setShortcut(keyCode: code, carbonModifiers: mods)
-                        }
-                    }
+        if let tab1 = tabView.tabViewItem(at: 0).view {
+            for v in tab1.subviews {
+                if let rec = v as? ShortcutRecorderView {
+                    rec.setShortcut(keyCode: code, carbonModifiers: mods)
                 }
             }
         }
@@ -115,16 +117,16 @@ public final class PreferencesWindowController: NSWindowController {
     // MARK: - Tab 2: Format & Compression
     
     private func buildFormatTab() -> NSView {
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 450, height: 340))
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: 350))
         let settings = ImageCompressionSettings.load()
         
         // Format selector
-        let formatLabel = NSTextField(labelWithString: "Định dạng file xuất ra:")
+        let formatLabel = NSTextField(labelWithString: "Export image format:")
         formatLabel.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
-        formatLabel.frame = NSRect(x: 20, y: 280, width: 200, height: 20)
+        formatLabel.frame = NSRect(x: 20, y: 290, width: 200, height: 20)
         view.addSubview(formatLabel)
         
-        formatPopup.frame = NSRect(x: 20, y: 246, width: 180, height: 28)
+        formatPopup.frame = NSRect(x: 20, y: 256, width: 180, height: 28)
         formatPopup.removeAllItems()
         for format in ImageExportFormat.allCases {
             formatPopup.addItem(withTitle: format.rawValue)
@@ -135,33 +137,33 @@ public final class PreferencesWindowController: NSWindowController {
         view.addSubview(formatPopup)
         
         // Compression Checkbox
-        compressionCheckbox.frame = NSRect(x: 20, y: 196, width: 380, height: 24)
+        compressionCheckbox.frame = NSRect(x: 20, y: 206, width: 400, height: 24)
         compressionCheckbox.state = settings.isCompressionEnabled ? .on : .off
         compressionCheckbox.target = self
         compressionCheckbox.action = #selector(formatOrCompressionChanged)
         view.addSubview(compressionCheckbox)
         
         // Quality Slider
-        let sliderLabel = NSTextField(labelWithString: "Mức chất lượng ảnh (Quality):")
+        let sliderLabel = NSTextField(labelWithString: "Compression quality:")
         sliderLabel.font = NSFont.systemFont(ofSize: 12)
-        sliderLabel.frame = NSRect(x: 20, y: 156, width: 200, height: 20)
+        sliderLabel.frame = NSRect(x: 20, y: 166, width: 200, height: 20)
         view.addSubview(sliderLabel)
         
-        qualitySlider.frame = NSRect(x: 20, y: 126, width: 280, height: 24)
+        qualitySlider.frame = NSRect(x: 20, y: 136, width: 280, height: 24)
         qualitySlider.doubleValue = Double(settings.quality * 100)
         qualitySlider.target = self
         qualitySlider.action = #selector(sliderMoved(_:))
         view.addSubview(qualitySlider)
         
-        qualityLabel.frame = NSRect(x: 310, y: 126, width: 60, height: 24)
+        qualityLabel.frame = NSRect(x: 310, y: 136, width: 60, height: 24)
         qualityLabel.stringValue = "\(Int(settings.quality * 100))%"
         qualityLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
         view.addSubview(qualityLabel)
         
-        let note = NSTextField(labelWithString: "Lưu ý: Nén ảnh áp dụng cho JPEG, WebP, HEIC khi lưu vào ổ đĩa và tải lên S3.\nGiúp giảm kích thước file đáng kể mà vẫn giữ chữ viết sắc nét.")
+        let note = NSTextField(labelWithString: "Note: Compression applies to JPEG, WebP, and HEIC when saving to disk and uploading to S3.\nSignificantly reduces file size while preserving sharp text.")
         note.font = NSFont.systemFont(ofSize: 11)
         note.textColor = .secondaryLabelColor
-        note.frame = NSRect(x: 20, y: 60, width: 400, height: 40)
+        note.frame = NSRect(x: 20, y: 65, width: 420, height: 40)
         view.addSubview(note)
         
         return view
@@ -190,12 +192,12 @@ public final class PreferencesWindowController: NSWindowController {
     // MARK: - Tab 3: S3 Storage
     
     private func buildS3Tab() -> NSView {
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 450, height: 340))
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: 350))
         let config = S3Config.load()
         
-        var y: CGFloat = 290
+        var y: CGFloat = 300
         let h: CGFloat = 22
-        let gap: CGFloat = 32
+        let gap: CGFloat = 30
         
         func addRow(label: String, field: NSTextField, placeholder: String) {
             let lbl = NSTextField(labelWithString: label)
@@ -204,17 +206,17 @@ public final class PreferencesWindowController: NSWindowController {
             lbl.font = NSFont.systemFont(ofSize: 12)
             view.addSubview(lbl)
             
-            field.frame = NSRect(x: 156, y: y, width: 260, height: h)
+            field.frame = NSRect(x: 156, y: y, width: 270, height: h)
             field.placeholderString = placeholder
             view.addSubview(field)
             y -= gap
         }
         
         endpointField.stringValue = config.endpoint
-        addRow(label: "Endpoint URL:", field: endpointField, placeholder: "Để trống nếu dùng AWS S3")
+        addRow(label: "Endpoint URL:", field: endpointField, placeholder: "Leave empty for AWS S3")
         
         regionField.stringValue = config.region
-        addRow(label: "Region:", field: regionField, placeholder: "us-east-1 hoặc auto")
+        addRow(label: "Region:", field: regionField, placeholder: "us-east-1 or auto")
         
         bucketField.stringValue = config.bucket
         addRow(label: "Bucket Name:", field: bucketField, placeholder: "my-screenshot-bucket")
@@ -231,24 +233,24 @@ public final class PreferencesWindowController: NSWindowController {
         prefixField.stringValue = config.pathPrefix
         addRow(label: "Folder Prefix:", field: prefixField, placeholder: "screenshots/")
         
-        autoUploadCheckbox.frame = NSRect(x: 156, y: y + 4, width: 260, height: 20)
+        autoUploadCheckbox.frame = NSRect(x: 156, y: y + 4, width: 270, height: 20)
         autoUploadCheckbox.state = config.autoUpload ? .on : .off
         view.addSubview(autoUploadCheckbox)
         y -= 28
         
         // Action Buttons
-        let testBtn = NSButton(title: "Kiểm tra kết nối", target: self, action: #selector(testS3Connection))
+        let testBtn = NSButton(title: "Test Connection", target: self, action: #selector(testS3Connection))
         testBtn.bezelStyle = .rounded
         testBtn.frame = NSRect(x: 150, y: y - 4, width: 130, height: 28)
         view.addSubview(testBtn)
         
-        let saveBtn = NSButton(title: "Lưu cấu hình", target: self, action: #selector(saveS3Config))
+        let saveBtn = NSButton(title: "Save Config", target: self, action: #selector(saveS3Config))
         saveBtn.bezelStyle = .rounded
         saveBtn.keyEquivalent = "\r"
         saveBtn.frame = NSRect(x: 286, y: y - 4, width: 130, height: 28)
         view.addSubview(saveBtn)
         
-        s3StatusLabel.frame = NSRect(x: 20, y: y - 32, width: 396, height: 20)
+        s3StatusLabel.frame = NSRect(x: 20, y: y - 32, width: 410, height: 20)
         s3StatusLabel.font = NSFont.systemFont(ofSize: 11)
         s3StatusLabel.alignment = .center
         view.addSubview(s3StatusLabel)
@@ -270,7 +272,7 @@ public final class PreferencesWindowController: NSWindowController {
     }
     
     @objc private func testS3Connection() {
-        s3StatusLabel.stringValue = "Đang kiểm tra kết nối..."
+        s3StatusLabel.stringValue = "Testing connection..."
         s3StatusLabel.textColor = .labelColor
         let config = currentConfigFromUI()
         
@@ -289,7 +291,7 @@ public final class PreferencesWindowController: NSWindowController {
     @objc private func saveS3Config() {
         let config = currentConfigFromUI()
         config.save()
-        s3StatusLabel.stringValue = "Đã lưu cấu hình S3 thành công!"
+        s3StatusLabel.stringValue = "S3 configuration saved successfully!"
         s3StatusLabel.textColor = .systemGreen
     }
 }

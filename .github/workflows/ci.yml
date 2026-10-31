@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    name: Run Automated Tests
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Tests
+        run: swift test
+
+      - name: Verify Build
+        run: |
+          ./scripts/build_app.sh
+          ./scripts/verify_app_bundle.sh

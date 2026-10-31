@@ -74,7 +74,11 @@ public final class CaptureManager: @unchecked Sendable {
             return
         }
         
-        let error = NSError(domain: "PsrShot.CaptureManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "Không thể chụp màn hình. Vui lòng kiểm tra quyền Screen Recording."])
+        let error = NSError(
+            domain: "PsrShot.CaptureManager",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Unable to capture screen. Please check Screen Recording permissions."]
+        )
         completion(.failure(error))
     }
 }

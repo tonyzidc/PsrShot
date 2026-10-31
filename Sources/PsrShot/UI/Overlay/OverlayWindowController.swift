@@ -81,7 +81,7 @@ public final class OverlayWindowController: NSWindowController {
               ) else { return }
         
         ImageExporter.copyToPasteboard(cgImage: finalImage)
-        NSSound.beep() // subtle audio confirmation
+        NSSound.beep()
         dismiss()
     }
     
@@ -108,6 +108,29 @@ public final class OverlayWindowController: NSWindowController {
     }
     
     private func handleUpload() {
+        let config = S3Config.load()
+        guard config.isConfigured else {
+            // Guard: S3 is not configured yet. Show clear alert to user.
+            let alert = NSAlert()
+            alert.messageText = "S3 Cloud Storage Not Configured"
+            alert.informativeText = "Please configure your S3, Cloudflare R2, or MinIO credentials in Preferences before uploading."
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "Open Preferences")
+            alert.addButton(withTitle: "Cancel")
+            
+            overlayPanel?.orderOut(nil)
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                dismiss()
+                PreferencesWindowController.shared.showWindow(nil)
+                PreferencesWindowController.shared.selectTab(identifier: "s3")
+                NSApp.activate(ignoringOtherApps: true)
+            } else {
+                overlayPanel?.makeKeyAndOrderFront(nil)
+            }
+            return
+        }
+        
         guard let base = capturedImage,
               let screen = capturedScreen,
               let canvas = canvasView,

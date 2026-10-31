@@ -25,13 +25,18 @@ fi
 cp "${BUILD_BIN}" "${MACOS_DIR}/${APP_NAME}"
 chmod +x "${MACOS_DIR}/${APP_NAME}"
 
+# Strip symbols for ultra-small footprint
+strip -r -u "${MACOS_DIR}/${APP_NAME}"
+
 # Copy Info.plist
 cp "Resources/Info.plist" "${CONTENTS_DIR}/Info.plist"
 
-# Generate a high quality App Icon if iconutil / python is available
-if [ -f "Resources/AppIcon.icns" ]; then
-    cp "Resources/AppIcon.icns" "${RESOURCES_DIR}/AppIcon.icns"
+# Generate App Icon if missing
+if [ ! -f "Resources/AppIcon.icns" ]; then
+    echo "==> Generating AppIcon.icns..."
+    swift scripts/generate_app_icon.swift
 fi
+cp "Resources/AppIcon.icns" "${RESOURCES_DIR}/AppIcon.icns"
 
 echo "==> 3. Ad-hoc code signing app bundle..."
 codesign --force --deep --sign - "${BUNDLE_DIR}"
@@ -40,5 +45,6 @@ echo ""
 echo "============================================================"
 echo " Successfully built: ${BUNDLE_DIR}"
 echo " Path: $(pwd)/${BUNDLE_DIR}"
+echo " Binary size: $(ls -lh "${MACOS_DIR}/${APP_NAME}" | awk '{print $5}')"
 echo " To run: open ${BUNDLE_DIR}"
 echo "============================================================"

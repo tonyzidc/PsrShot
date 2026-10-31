@@ -377,8 +377,13 @@ public final class CanvasView: NSView, NSTextFieldDelegate {
             
         case .pen:
             if case .pen(var points, let color, let width) = currentDrawingItem {
-                points.append(clampedPoint)
-                currentDrawingItem = .pen(points: points, color: color, strokeWidth: width)
+                if let last = points.last {
+                    let dist = hypot(clampedPoint.x - last.x, clampedPoint.y - last.y)
+                    if dist >= 2.5 {
+                        points.append(clampedPoint)
+                        currentDrawingItem = .pen(points: points, color: color, strokeWidth: width)
+                    }
+                }
             } else {
                 currentDrawingItem = .pen(points: [startPoint, clampedPoint], color: currentColor, strokeWidth: currentStrokeWidth)
             }
@@ -410,7 +415,7 @@ public final class CanvasView: NSView, NSTextFieldDelegate {
         field.textColor = currentColor
         field.font = NSFont.systemFont(ofSize: 16, weight: .bold)
         field.focusRingType = .none
-        field.placeholderString = "Nhập văn bản..."
+        field.placeholderString = "Type text..."
         field.delegate = self
         field.wantsLayer = true
         field.layer?.cornerRadius = 4

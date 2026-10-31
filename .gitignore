@@ -8,3 +8,6 @@ DerivedData/
 .netrc
 *.app/
 *.app
+*.zip
+*.dmg
+dmg_temp/

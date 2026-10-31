@@ -18,7 +18,7 @@ public final class ToolbarView: NSVisualEffectView {
     
     // Tool buttons
     private var toolButtons: [AnnotationTool: ToolButton] = [:]
-    private var colorButtons: [(NSColor, NSButton)] = []
+    private var colorButtons: [(NSColor, ColorSwatchButton)] = []
     
     public init() {
         super.init(frame: NSRect(x: 0, y: 0, width: 490, height: 38))
@@ -52,12 +52,12 @@ public final class ToolbarView: NSVisualEffectView {
         
         // --- 1. Tools Group ---
         let tools: [(AnnotationTool, String, String)] = [
-            (.select, "arrow.up.left.and.arrow.down.right", "Chọn / Di chuyển vùng"),
-            (.rectangle(filled: false), "square", "Vẽ hình chữ nhật"),
-            (.arrow, "arrow.up.right", "Vẽ mũi tên chỉ dẫn"),
-            (.pen, "pencil.tip", "Bút vẽ tự do"),
-            (.text, "textformat", "Chèn chữ viết"),
-            (.blur, "eye.slash", "Làm mờ / Che mờ vùng nhạy cảm")
+            (.select, "arrow.up.left.and.arrow.down.right", "Select & Move Region"),
+            (.rectangle(filled: false), "square", "Draw Rectangle"),
+            (.arrow, "arrow.up.right", "Draw Arrow"),
+            (.pen, "pencil.tip", "Freehand Pen"),
+            (.text, "textformat", "Insert Text"),
+            (.blur, "eye.slash", "Blur Sensitive Area")
         ]
         
         for (tool, symbol, tip) in tools {
@@ -76,26 +76,21 @@ public final class ToolbarView: NSVisualEffectView {
         
         // --- 2. Color Palette ---
         let colors: [(NSColor, String)] = [
-            (.systemRed, "Màu Đỏ"),
-            (.systemBlue, "Màu Xanh Dương"),
-            (.systemGreen, "Màu Xanh Lá"),
-            (.systemYellow, "Màu Vàng"),
-            (.white, "Màu Trắng")
+            (.systemRed, "Red Color"),
+            (.systemBlue, "Blue Color"),
+            (.systemGreen, "Green Color"),
+            (.systemYellow, "Yellow Color"),
+            (.white, "White Color")
         ]
         
         for (color, tip) in colors {
-            let colorBtn = NSButton(frame: NSRect(x: xOffset + 4, y: btnY + 4, width: 20, height: 20))
-            colorBtn.isBordered = false
-            colorBtn.wantsLayer = true
-            colorBtn.layer?.cornerRadius = 10
-            colorBtn.layer?.backgroundColor = color.cgColor
-            colorBtn.layer?.borderColor = (color == currentColor ? NSColor.white.cgColor : NSColor.black.withAlphaComponent(0.4).cgColor)
-            colorBtn.layer?.borderWidth = (color == currentColor ? 2.5 : 1.0)
-            colorBtn.toolTip = tip
-            colorBtn.target = self
-            colorBtn.action = #selector(colorClicked(_:))
-            addSubview(colorBtn)
-            colorButtons.append((color, colorBtn))
+            let swatch = ColorSwatchButton(color: color, tooltip: tip, target: self, action: #selector(colorClicked(_:)))
+            swatch.frame = NSRect(x: xOffset + 2, y: btnY + 3, width: 22, height: 22)
+            if color == currentColor {
+                swatch.isSwatchSelected = true
+            }
+            addSubview(swatch)
+            colorButtons.append((color, swatch))
             xOffset += 24
         }
         
@@ -105,7 +100,7 @@ public final class ToolbarView: NSVisualEffectView {
         xOffset += 8
         
         // --- 3. Undo ---
-        let undoBtn = ToolButton(systemSymbol: "arrow.uturn.backward", tooltip: "Hoàn tác (Cmd + Z)", target: self, action: #selector(undoClicked))
+        let undoBtn = ToolButton(systemSymbol: "arrow.uturn.backward", tooltip: "Undo (Cmd + Z)", target: self, action: #selector(undoClicked))
         undoBtn.frame = NSRect(x: xOffset, y: btnY, width: btnSize, height: btnSize)
         addSubview(undoBtn)
         xOffset += btnSize + 6
@@ -115,22 +110,22 @@ public final class ToolbarView: NSVisualEffectView {
         xOffset += 8
         
         // --- 4. Actions: Copy, Save, Upload, Close ---
-        let copyBtn = ToolButton(systemSymbol: "doc.on.clipboard", tooltip: "Sao chép vào Clipboard (Cmd + C)", target: self, action: #selector(copyClicked))
+        let copyBtn = ToolButton(systemSymbol: "doc.on.clipboard", tooltip: "Copy to Clipboard (Cmd + C)", target: self, action: #selector(copyClicked))
         copyBtn.frame = NSRect(x: xOffset, y: btnY, width: btnSize, height: btnSize)
         addSubview(copyBtn)
         xOffset += btnSize + 2
         
-        let saveBtn = ToolButton(systemSymbol: "square.and.arrow.down", tooltip: "Lưu vào máy (Cmd + S)", target: self, action: #selector(saveClicked))
+        let saveBtn = ToolButton(systemSymbol: "square.and.arrow.down", tooltip: "Save to Disk (Cmd + S)", target: self, action: #selector(saveClicked))
         saveBtn.frame = NSRect(x: xOffset, y: btnY, width: btnSize, height: btnSize)
         addSubview(saveBtn)
         xOffset += btnSize + 2
         
-        let uploadBtn = ToolButton(systemSymbol: "icloud.and.arrow.up", tooltip: "Tải lên S3 Cloud & Copy Link (Cmd + U)", target: self, action: #selector(uploadClicked))
+        let uploadBtn = ToolButton(systemSymbol: "icloud.and.arrow.up", tooltip: "Upload to S3 Cloud & Copy Link (Cmd + U)", target: self, action: #selector(uploadClicked))
         uploadBtn.frame = NSRect(x: xOffset, y: btnY, width: btnSize, height: btnSize)
         addSubview(uploadBtn)
         xOffset += btnSize + 2
         
-        let closeBtn = ToolButton(systemSymbol: "xmark", tooltip: "Đóng (ESC)", target: self, action: #selector(closeClicked))
+        let closeBtn = ToolButton(systemSymbol: "xmark", tooltip: "Close (ESC)", target: self, action: #selector(closeClicked))
         closeBtn.frame = NSRect(x: xOffset, y: btnY, width: btnSize, height: btnSize)
         addSubview(closeBtn)
         xOffset += btnSize + 8
@@ -160,16 +155,14 @@ public final class ToolbarView: NSVisualEffectView {
         }
     }
     
-    @objc private func colorClicked(_ sender: NSButton) {
+    @objc private func colorClicked(_ sender: ColorSwatchButton) {
         for (color, btn) in colorButtons {
             if btn === sender {
+                btn.isSwatchSelected = true
                 currentColor = color
-                btn.layer?.borderWidth = 2.5
-                btn.layer?.borderColor = NSColor.white.cgColor
                 onColorSelected?(color)
             } else {
-                btn.layer?.borderWidth = 1.0
-                btn.layer?.borderColor = NSColor.black.withAlphaComponent(0.4).cgColor
+                btn.isSwatchSelected = false
             }
         }
     }

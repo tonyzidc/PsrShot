@@ -24,28 +24,28 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 button.title = "📸"
             }
-            button.toolTip = "PsrShot - Chụp màn hình"
+            button.toolTip = "PsrShot - Screen Capture"
         }
         
         let menu = NSMenu()
         
-        let captureItem = NSMenuItem(title: "Chụp vùng màn hình", action: #selector(captureAreaClicked), keyEquivalent: "")
+        let captureItem = NSMenuItem(title: "Capture Area", action: #selector(captureAreaClicked), keyEquivalent: "")
         menu.addItem(captureItem)
         
-        let captureFullScreenItem = NSMenuItem(title: "Chụp toàn màn hình", action: #selector(captureFullScreenClicked), keyEquivalent: "")
+        let captureFullScreenItem = NSMenuItem(title: "Capture Fullscreen", action: #selector(captureFullScreenClicked), keyEquivalent: "")
         menu.addItem(captureFullScreenItem)
         
         menu.addItem(NSMenuItem.separator())
         
-        let prefsItem = NSMenuItem(title: "Cài đặt (Preferences)...", action: #selector(openPreferencesClicked), keyEquivalent: ",")
+        let prefsItem = NSMenuItem(title: "Preferences...", action: #selector(openPreferencesClicked), keyEquivalent: ",")
         menu.addItem(prefsItem)
         
         menu.addItem(NSMenuItem.separator())
         
-        let aboutItem = NSMenuItem(title: "Giới thiệu PsrShot", action: #selector(aboutClicked), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: "About PsrShot", action: #selector(aboutClicked), keyEquivalent: "")
         menu.addItem(aboutItem)
         
-        let quitItem = NSMenuItem(title: "Thoát PsrShot", action: #selector(quitClicked), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit PsrShot", action: #selector(quitClicked), keyEquivalent: "q")
         menu.addItem(quitItem)
         
         statusItem.menu = menu
@@ -72,7 +72,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                     OverlayWindowController.shared.showOverlay(image: image, screen: screen)
                 case .failure(let error):
                     let alert = NSAlert()
-                    alert.messageText = "Lỗi chụp màn hình"
+                    alert.messageText = "Screen Capture Error"
                     alert.informativeText = error.localizedDescription
                     alert.alertStyle = .critical
                     alert.runModal()
@@ -107,7 +107,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                 case .failure(let error):
                     let alert = NSAlert()
-                    alert.messageText = "Lỗi chụp toàn màn hình"
+                    alert.messageText = "Fullscreen Capture Error"
                     alert.informativeText = error.localizedDescription
                     alert.alertStyle = .critical
                     alert.runModal()
@@ -124,9 +124,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func aboutClicked() {
         let alert = NSAlert()
         alert.messageText = "PsrShot v1.0.0"
-        alert.informativeText = "Ứng dụng chụp màn hình và ghi chú siêu nhẹ cho macOS (Lightshot Clone).\n\nTính năng:\n• Phím tắt toàn hệ thống tuỳ chỉnh\n• Công cụ chú thích trực quan (Mũi tên, Hình hộp, Bút vẽ, Chữ, Làm mờ)\n• Lưu định dạng PNG, JPEG, WebP, HEIC kèm nén ảnh\n• Tự động upload lên S3 / Cloudflare R2 / MinIO và sao chép link xem\n\nPhát triển hoàn toàn bằng native Swift & AppKit, zero external dependencies."
+        alert.informativeText = "Ultra-lightweight native macOS screenshot & annotation tool (Lightshot Clone).\n\nFeatures:\n• Global customizable hotkey\n• Rich annotation suite (Rectangle, Arrow, Pen, Text, Blur)\n• Multi-format export (PNG, JPEG, WebP, HEIC) with hardware compression\n• Direct S3 / Cloudflare R2 / MinIO upload & clipboard view link\n\nBuilt natively with Swift, AppKit, and zero external dependencies."
         alert.alertStyle = .informational
-        alert.addButton(withTitle: "Đóng")
+        alert.addButton(withTitle: "Close")
         alert.runModal()
     }
     

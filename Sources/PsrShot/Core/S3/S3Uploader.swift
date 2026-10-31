@@ -13,7 +13,12 @@ public final class S3Uploader {
     ) {
         let config = S3Config.load()
         guard config.isConfigured else {
-            let error = NSError(domain: "PsrShot.S3", code: 400, userInfo: [NSLocalizedDescriptionKey: "Cấu hình S3 chưa hoàn chỉnh. Vui lòng vào Cài đặt (Preferences) để cấu hình S3 Storage."])
+            let error = NSError(
+                domain: "PsrShot.S3",
+                code: 400,
+                userInfo: [NSLocalizedDescriptionKey: "S3 storage is not configured. Please enter your credentials in Preferences."]
+            )
+            NotificationManager.shared.postUploadFailure(error: error)
             completion(.failure(error))
             return
         }
@@ -28,7 +33,6 @@ public final class S3Uploader {
         if !prefix.isEmpty && !prefix.hasSuffix("/") {
             prefix += "/"
         }
-        // Remove leading slash if any
         if prefix.hasPrefix("/") {
             prefix.removeFirst()
         }
@@ -36,7 +40,12 @@ public final class S3Uploader {
         let objectKey = "\(prefix)\(timestamp)_\(randomSuffix).\(fileExtension)"
         
         guard let uploadURL = makeUploadURL(config: config, key: objectKey) else {
-            let error = NSError(domain: "PsrShot.S3", code: 401, userInfo: [NSLocalizedDescriptionKey: "URL S3 Endpoint không hợp lệ."])
+            let error = NSError(
+                domain: "PsrShot.S3",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: "Invalid S3 Endpoint URL."]
+            )
+            NotificationManager.shared.postUploadFailure(error: error)
             completion(.failure(error))
             return
         }
@@ -80,9 +89,11 @@ public final class S3Uploader {
                     }
                 } else {
                     let responseBody = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-                    let error = NSError(domain: "PsrShot.S3", code: httpResponse.statusCode, userInfo: [
-                        NSLocalizedDescriptionKey: "Upload lên S3 thất bại (HTTP \(httpResponse.statusCode)): \(responseBody)"
-                    ])
+                    let error = NSError(
+                        domain: "PsrShot.S3",
+                        code: httpResponse.statusCode,
+                        userInfo: [NSLocalizedDescriptionKey: "S3 upload failed (HTTP \(httpResponse.statusCode)): \(responseBody)"]
+                    )
                     DispatchQueue.main.async {
                         NotificationManager.shared.postUploadFailure(error: error)
                         completion(.failure(error))
@@ -95,13 +106,21 @@ public final class S3Uploader {
     
     public func testConnection(config: S3Config, completion: @escaping (Result<String, Error>) -> Void) {
         guard config.isConfigured else {
-            completion(.failure(NSError(domain: "PsrShot.S3", code: 400, userInfo: [NSLocalizedDescriptionKey: "Vui lòng nhập đầy đủ Bucket, Access Key và Secret Key."])))
+            completion(.failure(NSError(
+                domain: "PsrShot.S3",
+                code: 400,
+                userInfo: [NSLocalizedDescriptionKey: "Please enter Bucket, Access Key, and Secret Key."]
+            )))
             return
         }
         
         let testKey = ".psrshot_probe_\(UUID().uuidString.prefix(8))"
         guard let url = makeUploadURL(config: config, key: testKey) else {
-            completion(.failure(NSError(domain: "PsrShot.S3", code: 401, userInfo: [NSLocalizedDescriptionKey: "Endpoint không hợp lệ."])))
+            completion(.failure(NSError(
+                domain: "PsrShot.S3",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: "Invalid S3 Endpoint URL."]
+            )))
             return
         }
         
@@ -130,10 +149,10 @@ public final class S3Uploader {
             if let http = response as? HTTPURLResponse {
                 if (200...204).contains(http.statusCode) {
                     DispatchQueue.main.async {
-                        completion(.success("Kết nối thành công! Bucket đã sẵn sàng lưu trữ."))
+                        completion(.success("Connection verified! Storage bucket is ready."))
                     }
                 } else {
-                    let msg = data.flatMap { String(data: $0, encoding: .utf8) } ?? "Mã phản hồi: \(http.statusCode)"
+                    let msg = data.flatMap { String(data: $0, encoding: .utf8) } ?? "Status code: \(http.statusCode)"
                     let err = NSError(domain: "PsrShot.S3", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
                     DispatchQueue.main.async { completion(.failure(err)) }
                 }
@@ -157,7 +176,6 @@ public final class S3Uploader {
             if !base.hasSuffix("/") {
                 base += "/"
             }
-            // Standard path-style for custom endpoints: https://endpoint/bucket/key
             return URL(string: "\(base)\(config.bucket)/\(key)")
         }
     }

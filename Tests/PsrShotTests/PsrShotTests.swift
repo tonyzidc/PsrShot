@@ -5,7 +5,7 @@ import Cocoa
 import Carbon
 @testable import PsrShot
 
-@Suite("PsrShot Core Tests")
+@Suite("PsrShot Core Function Tests")
 struct PsrShotTests {
     
     @Test("Selection Handles Geometry and Positions")
@@ -139,6 +139,28 @@ struct PsrShotTests {
         #expect(headers["Content-Type"] == "image/png")
     }
     
+    @Test("S3 Unconfigured Upload Fails Immediately with Guard")
+    func testS3UnconfiguredUploadError() async {
+        // Reset config in test
+        UserDefaults.standard.removeObject(forKey: "psrshot_s3_storage_configuration")
+        
+        await withCheckedContinuation { continuation in
+            S3Uploader.shared.upload(
+                imageData: "test".data(using: .utf8)!,
+                mimeType: "image/png",
+                fileExtension: "png"
+            ) { result in
+                switch result {
+                case .success:
+                    Issue.record("Upload should fail when S3 is not configured")
+                case .failure(let error):
+                    #expect(error.localizedDescription.contains("S3 storage is not configured"))
+                }
+                continuation.resume()
+            }
+        }
+    }
+    
     @Test("Hotkey Display String and Carbon Modifiers")
     func testHotkeyManagerHelpers() {
         let cmdShiftFlags: NSEvent.ModifierFlags = [.command, .shift]
@@ -153,7 +175,6 @@ struct PsrShotTests {
     
     @Test("Image Exporter Offscreen Rendering")
     func testImageExporterRendering() {
-        // Create 100x100 dummy bitmap
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let ctx = CGContext(
             data: nil,
@@ -187,5 +208,32 @@ struct PsrShotTests {
             #expect(rendered.width == Int(80 * scale))
             #expect(rendered.height == Int(60 * scale))
         }
+    }
+    
+    @Test("Color Swatch Button Setup and White Contrast Definition")
+    func testColorSwatchButtonSetup() {
+        let whiteSwatch = ColorSwatchButton(color: .white, tooltip: "White Color", target: nil, action: #selector(NSObject.description))
+        let redSwatch = ColorSwatchButton(color: .systemRed, tooltip: "Red Color", target: nil, action: #selector(NSObject.description))
+        
+        #expect(whiteSwatch.swatchColor == .white)
+        #expect(whiteSwatch.isSwatchSelected == false)
+        
+        whiteSwatch.isSwatchSelected = true
+        #expect(whiteSwatch.isSwatchSelected == true)
+        
+        #expect(redSwatch.swatchColor == .systemRed)
+    }
+    
+    @Test("Pen Distance Downsampling Math")
+    func testPenDownsamplingMath() {
+        let p1 = CGPoint(x: 100, y: 100)
+        let p2 = CGPoint(x: 101, y: 101) // Distance = sqrt(2) ≈ 1.414 < 2.5 -> should ignore
+        let p3 = CGPoint(x: 105, y: 105) // Distance from p1 ≈ 7.07 > 2.5 -> should keep
+        
+        let d1_2 = hypot(p2.x - p1.x, p2.y - p1.y)
+        let d1_3 = hypot(p3.x - p1.x, p3.y - p1.y)
+        
+        #expect(d1_2 < 2.5)
+        #expect(d1_3 >= 2.5)
     }
 }
