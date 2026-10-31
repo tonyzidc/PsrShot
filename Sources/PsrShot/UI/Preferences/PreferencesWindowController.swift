@@ -13,6 +13,9 @@ public final class PreferencesWindowController: NSWindowController {
     private var qualitySlider = NSSlider(value: 80, minValue: 10, maxValue: 100, target: nil, action: nil)
     private var qualityLabel = NSTextField(labelWithString: "80%")
     
+    // UI Elements for Updates
+    private var autoCheckUpdatesCheckbox = NSButton(checkboxWithTitle: "Automatically check for updates on startup", target: nil, action: nil)
+    
     // UI Elements for S3
     private var endpointField = NSTextField()
     private var regionField = NSTextField()
@@ -97,7 +100,36 @@ public final class PreferencesWindowController: NSWindowController {
         resetBtn.frame = NSRect(x: 16, y: 170, width: 228, height: 32)
         view.addSubview(resetBtn)
         
+        let separator = NSBox(frame: NSRect(x: 20, y: 145, width: 420, height: 1))
+        separator.boxType = .separator
+        view.addSubview(separator)
+        
+        let updatesTitle = NSTextField(labelWithString: "Software Updates:")
+        updatesTitle.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        updatesTitle.frame = NSRect(x: 20, y: 112, width: 400, height: 20)
+        view.addSubview(updatesTitle)
+        
+        autoCheckUpdatesCheckbox.frame = NSRect(x: 20, y: 82, width: 380, height: 22)
+        autoCheckUpdatesCheckbox.state = UpdateChecker.shared.autoCheckOnLaunch ? .on : .off
+        autoCheckUpdatesCheckbox.target = self
+        autoCheckUpdatesCheckbox.action = #selector(autoCheckUpdatesChanged)
+        view.addSubview(autoCheckUpdatesCheckbox)
+        
+        let checkNowBtn = NSButton(title: "Check for Updates Now...", target: self, action: #selector(checkUpdatesFromPrefsClicked))
+        checkNowBtn.bezelStyle = .rounded
+        checkNowBtn.frame = NSRect(x: 16, y: 40, width: 200, height: 32)
+        view.addSubview(checkNowBtn)
+        
         return view
+    }
+    
+    @objc private func autoCheckUpdatesChanged() {
+        UpdateChecker.shared.autoCheckOnLaunch = (autoCheckUpdatesCheckbox.state == .on)
+    }
+    
+    @objc private func checkUpdatesFromPrefsClicked() {
+        AboutWindowController.shared.showWindow(nil)
+        AboutWindowController.shared.checkUpdatesClicked()
     }
     
     @objc private func resetDefaultHotkey() {

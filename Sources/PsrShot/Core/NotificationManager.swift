@@ -71,6 +71,30 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
     
+    public func postUpdateAvailable(version: String, releaseURL: String, releaseNotes: String? = nil) {
+        guard Self.isNotificationSupported else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "PsrShot Update Available 🚀"
+        if let notes = releaseNotes, !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            content.body = "A new version \(version) is ready to download.\nClick to view release details and update."
+        } else {
+            content.body = "A new version \(version) is available.\nClick to download the latest update."
+        }
+        content.sound = .default
+        content.userInfo = ["updateURL": releaseURL]
+        
+        let request = UNNotificationRequest(
+            identifier: "psrshot-update-\(version)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                NSLog("[NotificationManager] Error posting update notification: \(error)")
+            }
+        }
+    }
+    
     // MARK: - UNUserNotificationCenterDelegate
     
     public func userNotificationCenter(
@@ -90,7 +114,8 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        if let urlString = response.notification.request.content.userInfo["viewURL"] as? String,
+        let userInfo = response.notification.request.content.userInfo
+        if let urlString = (userInfo["updateURL"] ?? userInfo["viewURL"]) as? String,
            let url = URL(string: urlString) {
             NSWorkspace.shared.open(url)
         }

@@ -10,6 +10,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusItem()
         setupHotkey()
         NotificationManager.shared.requestAuthorization()
+        checkForUpdatesOnLaunch()
     }
     
     // MARK: - Menu Bar Status Item
@@ -122,12 +123,26 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc private func aboutClicked() {
-        let alert = NSAlert()
-        alert.messageText = "PsrShot v1.0.0"
-        alert.informativeText = "Ultra-lightweight native macOS screenshot & annotation tool (Lightshot Clone).\n\nFeatures:\n• Global customizable hotkey\n• Rich annotation suite (Rectangle, Arrow, Pen, Text, Blur)\n• Multi-format export (PNG, JPEG, WebP, HEIC) with hardware compression\n• Direct S3 / Cloudflare R2 / MinIO upload & clipboard view link\n\nBuilt natively with Swift, AppKit, and zero external dependencies."
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Close")
-        alert.runModal()
+        AboutWindowController.shared.showWindow(nil)
+    }
+    
+    // MARK: - Auto Update Check
+    
+    private func checkForUpdatesOnLaunch() {
+        UpdateChecker.shared.checkForUpdates(isUserInitiated: false) { result in
+            switch result {
+            case .success(let checkResult):
+                if case .updateAvailable(let release, _) = checkResult {
+                    NotificationManager.shared.postUpdateAvailable(
+                        version: release.tagName,
+                        releaseURL: release.htmlUrl,
+                        releaseNotes: release.body
+                    )
+                }
+            case .failure(let error):
+                NSLog("[PsrShot] Startup update check failed: \(error.localizedDescription)")
+            }
+        }
     }
     
     @objc private func quitClicked() {
