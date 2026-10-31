@@ -16,6 +16,9 @@ public final class PreferencesWindowController: NSWindowController {
     // UI Elements for Updates
     private var autoCheckUpdatesCheckbox = NSButton(checkboxWithTitle: "Automatically check for updates on startup", target: nil, action: nil)
     
+    // UI Elements for Permissions
+    private var permissionStatusLabel = NSTextField(labelWithString: "")
+    
     // UI Elements for S3
     private var endpointField = NSTextField()
     private var regionField = NSTextField()
@@ -68,6 +71,12 @@ public final class PreferencesWindowController: NSWindowController {
         tab3.label = "S3 Cloud Storage"
         tab3.view = buildS3Tab()
         tabView.addTabViewItem(tab3)
+        
+        // Tab 4: Permissions
+        let tab4 = NSTabViewItem(identifier: "permissions")
+        tab4.label = "Permissions"
+        tab4.view = buildPermissionsTab()
+        tabView.addTabViewItem(tab4)
         
         window.contentView?.addSubview(tabView)
     }
@@ -325,5 +334,88 @@ public final class PreferencesWindowController: NSWindowController {
         config.save()
         s3StatusLabel.stringValue = "S3 configuration saved successfully!"
         s3StatusLabel.textColor = .systemGreen
+    }
+    
+    public override func showWindow(_ sender: Any?) {
+        super.showWindow(sender)
+        updatePermissionStatusUI()
+    }
+    
+    // MARK: - Tab 4: Permissions
+    
+    private func buildPermissionsTab() -> NSView {
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: 350))
+        
+        let titleLabel = NSTextField(labelWithString: "Screen Recording Permission")
+        titleLabel.font = NSFont.systemFont(ofSize: 14, weight: .bold)
+        titleLabel.frame = NSRect(x: 20, y: 295, width: 420, height: 22)
+        view.addSubview(titleLabel)
+        
+        permissionStatusLabel.frame = NSRect(x: 20, y: 260, width: 420, height: 24)
+        permissionStatusLabel.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        view.addSubview(permissionStatusLabel)
+        updatePermissionStatusUI()
+        
+        let refreshBtn = NSButton(title: "Check Status", target: self, action: #selector(refreshPermissionStatusClicked))
+        refreshBtn.bezelStyle = .rounded
+        refreshBtn.frame = NSRect(x: 16, y: 220, width: 140, height: 32)
+        view.addSubview(refreshBtn)
+        
+        let separator = NSBox(frame: NSRect(x: 20, y: 205, width: 420, height: 1))
+        separator.boxType = .separator
+        view.addSubview(separator)
+        
+        let guideTitle = NSTextField(labelWithString: "How to enable Screen Recording:")
+        guideTitle.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
+        guideTitle.frame = NSRect(x: 20, y: 175, width: 420, height: 20)
+        view.addSubview(guideTitle)
+        
+        let guideBody = NSTextField(wrappingLabelWithString: """
+1. Click 'Open System Settings' below.
+2. If PsrShot is not listed under 'Screen & System Audio Recording':
+   • Click the '+' (plus) button at the bottom of the list.
+   • Select PsrShot (from Applications or click 'Reveal in Finder').
+3. Ensure the toggle switch next to PsrShot is turned ON.
+4. Restart PsrShot if prompted by macOS.
+""")
+        guideBody.font = NSFont.systemFont(ofSize: 11)
+        guideBody.textColor = .secondaryLabelColor
+        guideBody.frame = NSRect(x: 20, y: 75, width: 420, height: 95)
+        view.addSubview(guideBody)
+        
+        let openSettingsBtn = NSButton(title: "Open System Settings", target: self, action: #selector(openSettingsFromPrefsClicked))
+        openSettingsBtn.bezelStyle = .rounded
+        openSettingsBtn.frame = NSRect(x: 16, y: 30, width: 180, height: 32)
+        view.addSubview(openSettingsBtn)
+        
+        let revealBtn = NSButton(title: "Reveal in Finder", target: self, action: #selector(revealAppFromPrefsClicked))
+        revealBtn.bezelStyle = .rounded
+        revealBtn.frame = NSRect(x: 205, y: 30, width: 150, height: 32)
+        view.addSubview(revealBtn)
+        
+        return view
+    }
+    
+    private func updatePermissionStatusUI() {
+        let granted = PermissionsManager.shared.hasScreenRecordingPermission()
+        if granted {
+            permissionStatusLabel.stringValue = "Status: Allowed (Permission Granted)"
+            permissionStatusLabel.textColor = .systemGreen
+        } else {
+            permissionStatusLabel.stringValue = "Status: Not Allowed (Permission Required)"
+            permissionStatusLabel.textColor = .systemOrange
+        }
+    }
+    
+    @objc private func refreshPermissionStatusClicked() {
+        updatePermissionStatusUI()
+    }
+    
+    @objc private func openSettingsFromPrefsClicked() {
+        PermissionsManager.shared.openScreenRecordingSettings()
+    }
+    
+    @objc private func revealAppFromPrefsClicked() {
+        PermissionsManager.shared.revealInFinder()
     }
 }

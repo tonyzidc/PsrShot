@@ -1,4 +1,4 @@
-.PHONY: all build test verify package app run clean
+.PHONY: all build test verify package app run install clean
 
 all: app
 
@@ -19,6 +19,11 @@ app:
 
 run: app
 	open PsrShot.app
+
+install: app
+	rm -rf /Applications/PsrShot.app
+	cp -R PsrShot.app /Applications/
+	@echo "PsrShot successfully installed to /Applications/PsrShot.app"
 
 clean:
 	rm -rf .build PsrShot.app PsrShot.dmg PsrShot-macOS.zip
